@@ -12,6 +12,7 @@ public class ChatService {
     @Value("${gemini.api.key}")
     private String geminiApiKey;
 
+
     private final RestTemplate restTemplate;
 
     public ChatService(RestTemplate restTemplate) {
