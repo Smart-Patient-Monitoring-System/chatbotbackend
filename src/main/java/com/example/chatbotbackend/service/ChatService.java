@@ -20,22 +20,25 @@ public class ChatService {
     }
 
     public String getReply(String message) {
-        // Use the stable v1 endpoint and ensure the key is appended as a query parameter
-        String url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + geminiApiKey;
+        // Gemini 2.5 Flash-Lite is the latest ultra-fast model for 2026
+        String model = "gemini-2.5-flash-lite";
 
-        // Structured exactly as Google Gemini expects: { "contents": [{"parts": [{"text": "..."}]}] }
+        // v1beta is required for 2.5-series and preview models
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/"
+                + model + ":generateContent?key=" + geminiApiKey;
+
+        // Standard Gemini request structure
         Map<String, Object> textPart = Map.of("text", message);
         Map<String, Object> contentsPart = Map.of("parts", List.of(textPart));
         Map<String, Object> requestBody = Map.of("contents", List.of(contentsPart));
 
         try {
-            // Log the URL (without the key for safety) to verify the service is running
             System.out.println("Calling Gemini API for message: " + message);
 
-            // Make the POST request
+            // Sending the POST request
             Map<String, Object> response = restTemplate.postForObject(url, requestBody, Map.class);
 
-            // Extract response text: candidates[0] -> content -> parts[0] -> text
+            // Parsing the response structure
             if (response != null && response.containsKey("candidates")) {
                 List<?> candidates = (List<?>) response.get("candidates");
                 if (!candidates.isEmpty()) {
@@ -50,8 +53,9 @@ public class ChatService {
             return "No response content from Gemini.";
 
         } catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
-            // This happens if the key is empty or the model name is wrong
-            return "API Error: 404 Not Found. Please ensure your API key is correctly set in application.properties. " + e.getResponseBodyAsString();
+            return "API Error: 404 Not Found. Please check if " + model + " is available in your region. " + e.getResponseBodyAsString();
+        } catch (org.springframework.web.client.HttpClientErrorException.TooManyRequests e) {
+            return "API Error: 429 Too Many Requests. You have exceeded your free tier quota.";
         } catch (Exception e) {
             return "Connection Error: " + e.getMessage();
         }
